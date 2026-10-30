@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestore Salute & Terapie</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="manifest" href="manifest.json" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏥</text></svg>"
+    />
+    <meta name="theme-color" content="#0ea5e9" />
+  </head>
+  <body>
+    <!-- Header con Benvenuto Personalizzato e Tema Giorno/Notte -->
+    <header class="app-header">
+      <div class="header-top">
+        <h1 id="app-saluto">🏥 Salute & Promemoria</h1>
+        <button
+          id="theme-toggle"
+          class="btn-theme"
+          title="Cambia tema Giorno/Notte"
+        >
+          🌙
+        </button>
+      </div>
+      <p>La tua gestione medica personale e riservata</p>
+    </header>
+
+    <main class="container">
+      <!-- Box Riepilogo Giornaliero -->
+      <section class="card summary-card">
+        <h2>☀️ Oggi per te</h2>
+        <div id="riepilogo-oggi" class="summary-content">
+          <!-- Inserito dinamicamente via JS -->
+        </div>
+      </section>
+
+      <!-- Sezione Farmaci -->
+      <section class="card">
+        <h2>💊 Gestione Farmaci e Terapie</h2>
+        <form id="form-farmaco" class="form-grid">
+          <input
+            type="text"
+            id="nome-farmaco"
+            placeholder="Nome farmaco (es. Cardirene)"
+            required
+          />
+          <input
+            type="text"
+            id="dosaggio"
+            placeholder="Dosaggio attuale (es. 1 compressa)"
+            required
+          />
+          <div style="display: flex; gap: 0.5rem">
+            <input
+              type="time"
+              id="ora-farmaco"
+              required
+              style="flex: 1"
+              title="Orario assunzione"
+            />
+            <select id="frequenza-farmaco" style="flex: 1">
+              <option value="Ogni giorno">Ogni giorno</option>
+              <option value="2-3 volte al giorno">2-3 volte al giorno</option>
+              <option value="1 volta a settimana">1 volta a settimana</option>
+              <option value="Al bisogno">Al bisogno</option>
+            </select>
+          </div>
+          <!-- Selettore giorno settimana (se 1 volta a settimana) -->
+          <select id="giorno-settimana" style="display: none">
+            <option value="Lunedì">Ogni Lunedì</option>
+            <option value="Martedì">Ogni Martedì</option>
+            <option value="Mercoledì">Ogni Mercoledì</option>
+            <option value="Giovedì">Ogni Giovedì</option>
+            <option value="Venerdì">Ogni Venerdì</option>
+            <option value="Sabato">Ogni Sabato</option>
+            <option value="Domenica">Ogni Domenica</option>
+          </select>
+          <!-- Campo Note / Variazione futura -->
+          <input
+            type="text"
+            id="note-farmaco"
+            placeholder="Note o cambio dosaggio futuro (es. 1 anno poi 1/2 compressa)"
+          />
+
+          <button type="submit" class="btn primary">Aggiungi Farmaco</button>
+        </form>
+        <ul id="lista-farmaci" class="data-list"></ul>
+      </section>
+
+      <!-- Sezione Appuntamenti -->
+      <section class="card">
+        <h2>📅 Appuntamenti e Visite Mediche</h2>
+        <form id="form-appuntamento" class="form-grid">
+          <input
+            type="text"
+            id="titolo-visita"
+            placeholder="Specialista / Visita (es. Cardiologo)"
+            required
+          />
+          <input type="datetime-local" id="data-visita" required />
+          <input type="text" id="luogo-visita" placeholder="Luogo o Ospedale" />
+          <button type="submit" class="btn primary">Aggiungi Visita</button>
+        </form>
+        <ul id="lista-appuntamenti" class="data-list"></ul>
+      </section>
+
+      <!-- Sezione Documenti PDF con Filtro Ricerca -->
+      <section class="card">
+        <h2>📄 Referti e Lettere di Dimissione</h2>
+        <form id="form-documento" class="form-grid">
+          <input
+            type="text"
+            id="nome-doc"
+            placeholder="Descrizione documento (es. Dimissioni Ospedale)"
+            required
+          />
+          <input type="file" id="file-pdf" accept="application/pdf" required />
+          <button type="submit" class="btn primary">Carica PDF</button>
+        </form>
+
+        <!-- Campo Filtro Ricerca Documenti -->
+        <div style="margin-bottom: 0.75rem">
+          <input
+            type="text"
+            id="cerca-pdf"
+            placeholder="🔍 Cerca tra i documenti salvati..."
+          />
+        </div>
+
+        <ul id="lista-documenti" class="data-list"></ul>
+      </section>
+
+      <!-- Sezione Backup e Sicurezza Dati -->
+      <section class="card">
+        <h2>💾 Sicurezza e Sincronizzazione</h2>
+        <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0">
+          Salva i dati, ripristinali o sincronizzali nel Calendario del
+          telefono.
+        </p>
+        <div
+          class="backup-card"
+          style="display: flex; flex-direction: column; gap: 0.75rem"
+        >
+          <button
+            id="btn-sync-ics"
+            class="btn"
+            style="background-color: var(--success); color: white; width: 100%"
+          >
+            📅 Sincronizza con Calendario Samsung (.ics)
+          </button>
+          <div style="display: flex; gap: 0.75rem; width: 100%">
+            <button id="btn-esporta" class="btn primary" style="flex: 1">
+              📥 Esporta Backup
+            </button>
+            <label
+              for="file-importa"
+              class="btn"
+              style="
+                flex: 1;
+                background-color: var(--item-bg);
+                color: var(--text-main);
+                border: 1px solid var(--border);
+                cursor: pointer;
+                text-align: center;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+              "
+            >
+              📤 Ripristina
+            </label>
+            <input
+              type="file"
+              id="file-importa"
+              accept=".json"
+              style="display: none"
+            />
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

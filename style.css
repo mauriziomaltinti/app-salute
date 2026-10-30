@@ -1,0 +1,250 @@
+/* COLORI BASE - MODALITÀ GIORNO */
+:root {
+  --primary: #0ea5e9;
+  --primary-dark: #0284c7;
+  --success: #10b981;
+  --success-dark: #059669;
+  --danger: #ef4444;
+  --bg-app: #f8fafc;
+  --card-bg: #ffffff;
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+  --border: #e2e8f0;
+  --item-bg: #f1f5f9;
+  --radius: 16px;
+  --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+}
+
+/* COLORI MODALITÀ NOTTE (DARK MODE) */
+body.dark-mode {
+  --primary: #38bdf8;
+  --primary-dark: #0ea5e9;
+  --success: #34d399;
+  --success-dark: #10b981;
+  --danger: #f87171;
+  --bg-app: #0f172a;
+  --card-bg: #1e293b;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --border: #334155;
+  --item-bg: #334155;
+  --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+}
+
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  margin: 0;
+  padding: 0;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Header */
+.app-header {
+  background: linear-gradient(135deg, #0284c7, #4f46e5);
+  color: white;
+  padding: 2.5rem 1rem 2rem;
+  border-bottom-left-radius: 24px;
+  border-bottom-right-radius: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.app-header p {
+  max-width: 700px;
+  margin: 0.5rem auto 0;
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+/* Pulsante Cambio Tema Giorno/Notte */
+.btn-theme {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  font-size: 1.2rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 50%;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    transform 0.2s;
+}
+
+.btn-theme:active {
+  transform: scale(0.9);
+}
+
+/* Contenitore e Schede */
+.container {
+  max-width: 700px;
+  margin: 1.5rem auto 3rem;
+  padding: 0 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  position: relative;
+  z-index: 10;
+}
+
+.card {
+  background: var(--card-bg);
+  padding: 1.25rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  transition: background-color 0.3s ease;
+}
+
+.card h2 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: var(--primary);
+  font-size: 1.15rem;
+  font-weight: 600;
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 0.5rem;
+}
+
+/* Scheda Riepilogo Oggi */
+.summary-card {
+  border-left: 5px solid var(--primary);
+}
+
+.summary-content p {
+  margin: 0.4rem 0;
+  font-size: 0.95rem;
+}
+
+/* Form e Campi */
+.form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+input,
+select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.95rem;
+  background-color: var(--card-bg);
+  color: var(--text-main);
+  box-sizing: border-box;
+}
+
+input:focus,
+select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+/* Pulsanti */
+.btn {
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.btn.primary {
+  background-color: var(--primary);
+  color: #ffffff;
+}
+
+.btn.success {
+  background-color: var(--success);
+  color: #ffffff;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.7rem;
+}
+
+.btn.success:hover {
+  background-color: var(--success-dark);
+}
+
+/* Sezione Backup Dati in basso */
+.backup-card {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.backup-card .btn {
+  flex: 1;
+  min-width: 140px;
+}
+
+/* Liste Dati */
+.data-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.data-list li {
+  background-color: var(--item-bg);
+  padding: 0.8rem 1rem;
+  border-radius: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid var(--border);
+  gap: 0.75rem;
+}
+
+.data-list li span {
+  font-size: 0.95rem;
+  word-break: break-word;
+}
+
+.item-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.btn-delete {
+  background: transparent;
+  color: var(--danger);
+  border: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.3rem;
+}
