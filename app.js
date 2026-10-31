@@ -116,11 +116,21 @@ window.eliminaFarmaco = function (index) {
   salvaERendendiFarmaci();
 };
 
-// Esporta singolo farmaco in .ics con data di inizio precisa e frequenza corretta
+// Esporta singolo farmaco in .ics distinguendo 'Ogni giorno' da '1 volta a settimana'
 window.esportaSingoloFarmaco = function (index) {
   const f = farmaci[index];
 
-  // Data di partenza impostata ad OGGI con l'ora esatta del farmaco
+  // Mappatura giorni della settimana per il formato standard ICS (RRULE BYDAY)
+  const mappaGiorniICS = {
+    Lunedì: "MO",
+    Martedì: "TU",
+    Mercoledì: "WE",
+    Giovedì: "TH",
+    Venerdì: "FR",
+    Sabato: "SA",
+    Domenica: "SU",
+  };
+
   let dataEvento = new Date();
   if (f.ora) {
     const parti = f.ora.split(":");
@@ -139,19 +149,22 @@ window.esportaSingoloFarmaco = function (index) {
     "PRODID:-//Salute App//IT",
     "BEGIN:VEVENT",
     `SUMMARY:Assumi ${f.nome} ${f.dosaggio}`,
-    `DESCRIPTION:Dosaggio ${f.dosaggio} - Frequenza ${f.frequenza} - Note: ${f.note || "Nessuna"}`,
+    `DESCRIPTION:Dosaggio ${f.dosaggio} - Frequenza ${f.frequenza}${f.giorno ? " (" + f.giorno + ")" : ""} - Note: ${f.note || "Nessuna"}`,
     `DTSTART:${dtstart}`,
     `DTEND:${dtend}`,
   ];
 
-  // Gestione rigida della frequenza di ripetizione
+  // Gestione precisa delle regole di ripetizione per il Calendario Samsung
   if (f.frequenza === "Ogni giorno" || f.frequenza === "2-3 volte al giorno") {
     icsLines.push("RRULE:FREQ=DAILY");
   } else if (f.frequenza === "1 volta a settimana") {
-    // Specifichiamo la ripetizione settimanale
-    icsLines.push("RRULE:FREQ=WEEKLY");
+    if (f.giorno && mappaGiorniICS[f.giorno]) {
+      // Imposta la ripetizione settimanale ESATTAMENTE nel giorno scelto (es. BYDAY=MO per Lunedì)
+      icsLines.push(`RRULE:FREQ=WEEKLY;BYDAY=${mappaGiorniICS[f.giorno]}`);
+    } else {
+      icsLines.push("RRULE:FREQ=WEEKLY");
+    }
   }
-  // Se è "Al bisogno", non aggiungiamo la RRULE (rimane evento singolo)
 
   icsLines.push("END:VEVENT");
   icsLines.push("END:VCALENDAR");
