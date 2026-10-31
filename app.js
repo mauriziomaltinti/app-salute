@@ -116,19 +116,21 @@ window.eliminaFarmaco = function (index) {
   salvaERendendiFarmaci();
 };
 
-// Esporta singolo farmaco in .ics con frequenza corretta
+// Esporta singolo farmaco in .ics con data di inizio precisa e frequenza corretta
 window.esportaSingoloFarmaco = function (index) {
   const f = farmaci[index];
+
+  // Data di partenza impostata ad OGGI con l'ora esatta del farmaco
   let dataEvento = new Date();
   if (f.ora) {
     const parti = f.ora.split(":");
-    dataEvento.setHours(parseInt(parti[0], 10), parseInt(parti[1], 10), 0);
+    dataEvento.setHours(parseInt(parti[0], 10), parseInt(parti[1], 10), 0, 0);
   } else {
-    dataEvento.setHours(9, 0, 0);
+    dataEvento.setHours(9, 0, 0, 0);
   }
 
   let dtstart = formattaData(dataEvento);
-  let dataFine = new Date(dataEvento.getTime() + 15 * 60000);
+  let dataFine = new Date(dataEvento.getTime() + 15 * 60000); // Durata 15 minuti
   let dtend = formattaData(dataFine);
 
   let icsLines = [
@@ -142,13 +144,14 @@ window.esportaSingoloFarmaco = function (index) {
     `DTEND:${dtend}`,
   ];
 
-  // Gestione corretta della regola di ripetizione
+  // Gestione rigida della frequenza di ripetizione
   if (f.frequenza === "Ogni giorno" || f.frequenza === "2-3 volte al giorno") {
     icsLines.push("RRULE:FREQ=DAILY");
   } else if (f.frequenza === "1 volta a settimana") {
+    // Specifichiamo la ripetizione settimanale
     icsLines.push("RRULE:FREQ=WEEKLY");
   }
-  // Se è "Al bisogno", non aggiungiamo nessuna regola RRULE (resta un evento singolo)
+  // Se è "Al bisogno", non aggiungiamo la RRULE (rimane evento singolo)
 
   icsLines.push("END:VEVENT");
   icsLines.push("END:VCALENDAR");
