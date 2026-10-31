@@ -29,11 +29,27 @@
     </header>
 
     <main class="container">
-      <!-- Box Riepilogo Giornaliero -->
+      <!-- Box Riepilogo Giornaliero e Sincronizzazione Calendario -->
       <section class="card summary-card">
         <h2>☀️ Oggi per te</h2>
         <div id="riepilogo-oggi" class="summary-content">
           <!-- Inserito dinamicamente via JS -->
+        </div>
+        <!-- Pulsante Calendario ben visibile in alto -->
+        <div
+          style="
+            margin-top: 1rem;
+            border-top: 1px solid var(--border);
+            padding-top: 0.75rem;
+          "
+        >
+          <button
+            id="btn-sync-ics"
+            class="btn"
+            style="background-color: var(--success); color: white; width: 100%"
+          >
+            📅 Sincronizza Calendario Samsung (.ics)
+          </button>
         </div>
       </section>
 
@@ -135,50 +151,33 @@
 
       <!-- Sezione Backup e Sicurezza Dati -->
       <section class="card">
-        <h2>💾 Sicurezza e Sincronizzazione</h2>
+        <h2>💾 Sicurezza e Backup Dati</h2>
         <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0">
-          Salva i dati, ripristinali o sincronizzali nel Calendario del
-          telefono.
+          Salva una copia dei dati o ripristinala se cambi dispositivo.
         </p>
-        <div
-          class="backup-card"
-          style="display: flex; flex-direction: column; gap: 0.75rem"
-        >
-          <button
-            id="btn-sync-ics"
-            class="btn"
-            style="background-color: var(--success); color: white; width: 100%"
-          >
-            📅 Sincronizza con Calendario Samsung (.ics)
+        <div class="backup-card">
+          <button id="btn-esporta" class="btn primary">
+            📥 Esporta Backup
           </button>
-          <div style="display: flex; gap: 0.75rem; width: 100%">
-            <button id="btn-esporta" class="btn primary" style="flex: 1">
-              📥 Esporta Backup
-            </button>
-            <label
-              for="file-importa"
-              class="btn"
-              style="
-                flex: 1;
-                background-color: var(--item-bg);
-                color: var(--text-main);
-                border: 1px solid var(--border);
-                cursor: pointer;
-                text-align: center;
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-              "
-            >
-              📤 Ripristina
-            </label>
-            <input
-              type="file"
-              id="file-importa"
-              accept=".json"
-              style="display: none"
-            />
-          </div>
+          <label
+            for="file-importa"
+            class="btn"
+            style="
+              background-color: var(--item-bg);
+              color: var(--text-main);
+              border: 1px solid var(--border);
+              cursor: pointer;
+              text-align: center;
+            "
+          >
+            📤 Ripristina
+          </label>
+          <input
+            type="file"
+            id="file-importa"
+            accept=".json"
+            style="display: none"
+          />
         </div>
       </section>
     </main>
