@@ -1,4 +1,4 @@
-// GESTIONE TEMA GIORNO / NOTTE
+// TEMA GIORNO / NOTTE
 const themeToggleBtn = document.getElementById("theme-toggle");
 const savedTheme = localStorage.getItem("theme");
 const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -17,7 +17,7 @@ themeToggleBtn.addEventListener("click", () => {
   localStorage.setItem("theme", isDark ? "dark" : "light");
 });
 
-// SALUTO DINAMICO ALL'AVVIO
+// SALUTO DINAMICO
 function impostaSaluto() {
   const salutoElem = document.getElementById("app-saluto");
   const oraAttuale = new Date().getHours();
@@ -33,7 +33,6 @@ function impostaSaluto() {
   salutoElem.textContent = saluto;
 }
 
-// REGISTRAZIONE SERVICE WORKER
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker
     .register("sw.js")
@@ -41,7 +40,18 @@ if ("serviceWorker" in navigator) {
     .catch((err) => console.error("Errore SW:", err));
 }
 
-// GESTIONE FARMACI E FREQUENZA SETTIMANALE
+// FORMATTAZIONE DATA ICS
+function formattaData(dataObj) {
+  const yyyy = dataObj.getUTCFullYear();
+  const mm = String(dataObj.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(dataObj.getUTCDate()).padStart(2, "0");
+  const hh = String(dataObj.getUTCHours()).padStart(2, "0");
+  const min = String(dataObj.getUTCMinutes()).padStart(2, "0");
+  const ss = String(dataObj.getUTCSeconds()).padStart(2, "0");
+  return `${yyyy}${mm}${dd}T${hh}${min}${ss}Z`;
+}
+
+// GESTIONE FARMACI
 const formFarmaco = document.getElementById("form-farmaco");
 const listaFarmaci = document.getElementById("lista-farmaci");
 const frequenzaSelect = document.getElementById("frequenza-farmaco");
@@ -70,12 +80,15 @@ function salvaERendendiFarmaci() {
     }
 
     let notaHtml = f.note
-      ? `<br><small style="color: var(--primary);">📝 Note/Scadenza: ${f.note}</small>`
+      ? `<br><small style="color: var(--primary);">📝 Note: ${f.note}</small>`
       : "";
 
     li.innerHTML = `
       <span><strong>💊 ${f.nome}</strong> - ${f.dosaggio}<br><small style="color: var(--text-muted)">Ore: ${f.ora} (${dettaglioFreq})</small>${notaHtml}</span>
-      <button class="btn-delete" onclick="eliminaFarmaco(${idx})">Elimina</button>
+      <div class="item-actions">
+        <button class="btn success" onclick="esportaSingoloFarmaco(${idx})" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">📅 Cal</button>
+        <button class="btn-delete" onclick="eliminaFarmaco(${idx})">Elimina</button>
+      </div>
     `;
     listaFarmaci.appendChild(li);
   });
@@ -103,6 +116,44 @@ window.eliminaFarmaco = function (index) {
   salvaERendendiFarmaci();
 };
 
+// Esporta singolo farmaco in .ics
+window.esportaSingoloFarmaco = function (index) {
+  const f = farmaci[index];
+  let dataEvento = new Date();
+  if (f.ora) {
+    const parti = f.ora.split(":");
+    dataEvento.setHours(parseInt(parti[0], 10), parseInt(parti[1], 10), 0);
+  } else {
+    dataEvento.setHours(9, 0, 0);
+  }
+
+  let dtstart = formattaData(dataEvento);
+  let dataFine = new Date(dataEvento.getTime() + 15 * 60000);
+  let dtend = formattaData(dataFine);
+
+  let icsLines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Salute App//IT",
+    "BEGIN:VEVENT",
+    `SUMMARY:Assumi ${f.nome} ${f.dosaggio}`,
+    `DESCRIPTION:Dosaggio ${f.dosaggio} - Frequenza ${f.frequenza} - Note: ${f.note || "Nessuna"}`,
+    `DTSTART:${dtstart}`,
+    `DTEND:${dtend}`,
+  ];
+
+  if (f.frequenza === "Ogni giorno" || f.frequenza === "2-3 volte al giorno") {
+    icsLines.push("RRULE:FREQ=DAILY");
+  } else if (f.frequenza === "1 volta a settimana") {
+    icsLines.push("RRULE:FREQ=WEEKLY");
+  }
+
+  icsLines.push("END:VEVENT");
+  icsLines.push("END:VCALENDAR");
+
+  scaricaFileIcs(icsLines.join("\r\n"), `${f.nome.replace(/\s+/g, "_")}.ics`);
+};
+
 // GESTIONE APPUNTAMENTI
 const formAppuntamento = document.getElementById("form-appuntamento");
 const listaAppuntamenti = document.getElementById("lista-appuntamenti");
@@ -120,7 +171,10 @@ function salvaERendendiAppuntamenti() {
 
     li.innerHTML = `
       <span><strong>📅 ${a.titolo}</strong><br><small style="color: var(--text-muted)">${dataFormattata} - ${a.luogo}</small></span>
-      <button class="btn-delete" onclick="eliminaAppuntamento(${idx})">Elimina</button>
+      <div class="item-actions">
+        <button class="btn success" onclick="esportaSingoloAppuntamento(${idx})" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">📅 Cal</button>
+        <button class="btn-delete" onclick="eliminaAppuntamento(${idx})">Elimina</button>
+      </div>
     `;
     listaAppuntamenti.appendChild(li);
   });
@@ -144,7 +198,47 @@ window.eliminaAppuntamento = function (index) {
   salvaERendendiAppuntamenti();
 };
 
-// GESTIONE PDF CON FILTRO DI RICERCA
+// Esporta singolo appuntamento in .ics
+window.esportaSingoloAppuntamento = function (index) {
+  const a = appuntamenti[index];
+  let d = new Date(a.data);
+  if (isNaN(d)) return;
+
+  let dtstart = formattaData(d);
+  let dataFine = new Date(d.getTime() + 30 * 60000);
+  let dtend = formattaData(dataFine);
+
+  let icsLines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Salute App//IT",
+    "BEGIN:VEVENT",
+    `SUMMARY:Visita ${a.titolo}`,
+    `DESCRIPTION:Presso ${a.luogo || "Studio medico"}`,
+    `LOCATION:${a.luogo || "Non specificato"}`,
+    `DTSTART:${dtstart}`,
+    `DTEND:${dtend}`,
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ];
+
+  scaricaFileIcs(icsLines.join("\r\n"), `${a.titolo.replace(/\s+/g, "_")}.ics`);
+};
+
+// Funzione di utilità per il download del file
+function scaricaFileIcs(content, filename) {
+  const blob = new Blob([content], { type: "text/calendar;charset=utf-8" });
+  const url = window.URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.URL.revokeObjectURL(url);
+}
+
+// GESTIONE PDF
 const formDocumento = document.getElementById("form-documento");
 const listaDocumenti = document.getElementById("lista-documenti");
 const cercaPdfInput = document.getElementById("cerca-pdf");
@@ -153,7 +247,6 @@ let documenti = JSON.parse(localStorage.getItem("documenti_salute")) || [];
 function salvaERendendiDocumenti(filtro = "") {
   localStorage.setItem("documenti_salute", JSON.stringify(documenti));
   listaDocumenti.innerHTML = "";
-
   const documentiFiltrati = documenti.filter((doc) =>
     doc.nome.toLowerCase().includes(filtro.toLowerCase()),
   );
@@ -169,7 +262,7 @@ function salvaERendendiDocumenti(filtro = "") {
     li.innerHTML = `
       <span>📄 <strong>${doc.nome}</strong></span>
       <div class="item-actions">
-        <a href="${doc.dataBase64}" download="${doc.nome}.pdf" class="btn success" style="text-decoration:none;">Apri</a>
+        <a href="${doc.dataBase64}" download="${doc.nome}.pdf" class="btn success" style="text-decoration:none; padding: 0.3rem 0.6rem; font-size: 0.8rem;">Apri</a>
         <button class="btn-delete" onclick="eliminaDocumento(${idx})">Elimina</button>
       </div>
     `;
@@ -177,9 +270,9 @@ function salvaERendendiDocumenti(filtro = "") {
   });
 }
 
-cercaPdfInput.addEventListener("input", (e) => {
-  salvaERendendiDocumenti(e.target.value);
-});
+cercaPdfInput.addEventListener("input", (e) =>
+  salvaERendendiDocumenti(e.target.value),
+);
 
 formDocumento.addEventListener("submit", (e) => {
   e.preventDefault();
@@ -203,107 +296,11 @@ window.eliminaDocumento = function (index) {
   salvaERendendiDocumenti();
 };
 
-// GENERAZIONE FILE .ICS COMPATIBILE CON SAMSUNG
-document.getElementById("btn-sync-ics").addEventListener("click", () => {
-  if (farmaci.length === 0 && appuntamenti.length === 0) {
-    alert(
-      "Aggiungi prima almeno un farmaco o un appuntamento da sincronizzare.",
-    );
-    return;
-  }
-
-  let icsLines = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//Salute App//IT",
-    "CALSCALE:GREGORIAN",
-    "METHOD:PUBLISH",
-  ];
-
-  function formattaData(dataObj) {
-    const yyyy = dataObj.getUTCFullYear();
-    const mm = String(dataObj.getUTCMonth() + 1).padStart(2, "0");
-    const dd = String(dataObj.getUTCDate()).padStart(2, "0");
-    const hh = String(dataObj.getUTCHours()).padStart(2, "0");
-    const min = String(dataObj.getUTCMinutes()).padStart(2, "0");
-    const ss = String(dataObj.getUTCSeconds()).padStart(2, "0");
-    return `${yyyy}${mm}${dd}T${hh}${min}${ss}Z`;
-  }
-
-  // 1. Aggiunta Farmaci
-  farmaci.forEach((f) => {
-    let dataEvento = new Date();
-    if (f.ora) {
-      const parti = f.ora.split(":");
-      dataEvento.setHours(parseInt(parti[0], 10), parseInt(parti[1], 10), 0);
-    } else {
-      dataEvento.setHours(9, 0, 0);
-    }
-
-    let dtstart = formattaData(dataEvento);
-    let dataFine = new Date(dataEvento.getTime() + 15 * 60000);
-    let dtend = formattaData(dataFine);
-
-    icsLines.push("BEGIN:VEVENT");
-    icsLines.push(`SUMMARY:Assumi ${f.nome} ${f.dosaggio}`);
-    icsLines.push(
-      `DESCRIPTION:Dosaggio ${f.dosaggio} - Frequenza ${f.frequenza}`,
-    );
-    icsLines.push(`DTSTART:${dtstart}`);
-    icsLines.push(`DTEND:${dtend}`);
-
-    if (
-      f.frequenza === "Ogni giorno" ||
-      f.frequenza === "2-3 volte al giorno"
-    ) {
-      icsLines.push("RRULE:FREQ=DAILY");
-    } else if (f.frequenza === "1 volta a settimana") {
-      icsLines.push("RRULE:FREQ=WEEKLY");
-    }
-    icsLines.push("END:VEVENT");
-  });
-
-  // 2. Aggiunta Appuntamenti (Visite)
-  appuntamenti.forEach((a) => {
-    let d = new Date(a.data);
-    if (!isNaN(d)) {
-      let dtstart = formattaData(d);
-      let dataFine = new Date(d.getTime() + 30 * 60000);
-      let dtend = formattaData(dataFine);
-
-      icsLines.push("BEGIN:VEVENT");
-      icsLines.push(`SUMMARY:Visita ${a.titolo}`);
-      icsLines.push(`DESCRIPTION:Presso ${a.luogo || "Studio medico"}`);
-      icsLines.push(`LOCATION:${a.luogo || "Non specificato"}`);
-      icsLines.push(`DTSTART:${dtstart}`);
-      icsLines.push(`DTEND:${dtend}`);
-      icsLines.push("END:VEVENT");
-    }
-  });
-
-  icsLines.push("END:VCALENDAR");
-
-  const icsContent = icsLines.join("\r\n");
-
-  const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
-  const url = window.URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = "promemoria_salute.ics";
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  window.URL.revokeObjectURL(url);
-
-  alert("File di calendario generato con successo!");
-});
-
-// RIEPILOGO GIORNALIERO (OGGI)
+// RIEPILOGO GIORNALIERO
 function aggiornaRiepilogoOggi() {
   const riepilogoElem = document.getElementById("riepilogo-oggi");
   const oggi = new Date();
   const oggiStr = oggi.toISOString().slice(0, 10);
-
   const giorniSettimana = [
     "Domenica",
     "Lunedì",
@@ -320,12 +317,10 @@ function aggiornaRiepilogoOggi() {
       f.frequenza === "Ogni giorno" ||
       f.frequenza === "2-3 volte al giorno" ||
       f.frequenza === "Al bisogno"
-    ) {
+    )
       return true;
-    }
-    if (f.frequenza === "1 volta a settimana" && f.giorno === nomeGiornoOggi) {
+    if (f.frequenza === "1 volta a settimana" && f.giorno === nomeGiornoOggi)
       return true;
-    }
     return false;
   });
 
@@ -334,77 +329,66 @@ function aggiornaRiepilogoOggi() {
   );
 
   let htmlContent = "";
-
   if (farmaciOggi.length === 0 && appuntamentiOggi.length === 0) {
     htmlContent =
       '<p style="color: var(--text-muted);">Nessuna terapia o visita registrata per oggi. Giornata tranquilla! 😊</p>';
   } else {
     if (farmaciOggi.length > 0) {
-      htmlContent += `<p>💊 <strong>Farmaci da prendere oggi (${farmaciOggi.length}):</strong> ${farmaciOggi.map((f) => `${f.nome} (${f.dosaggio} - ore ${f.ora})`).join(", ")}</p>`;
+      htmlContent += `<p>💊 <strong>Farmaci oggi (${farmaciOggi.length}):</strong> ${farmaciOggi.map((f) => `${f.nome} (${f.dosaggio} - ore ${f.ora})`).join(", ")}</p>`;
     }
     if (appuntamentiOggi.length > 0) {
-      htmlContent += `<p>📅 <strong>Visite in programma oggi (${appuntamentiOggi.length}):</strong> ${appuntamentiOggi.map((a) => `${a.titolo} a ${a.luogo}`).join(", ")}</p>`;
+      htmlContent += `<p>📅 <strong>Visite oggi (${appuntamentiOggi.length}):</strong> ${appuntamentiOggi.map((a) => `${a.titolo} a ${a.luogo}`).join(", ")}</p>`;
     }
   }
-
   riepilogoElem.innerHTML = htmlContent;
 }
 
-// BACKUP E RIPRISTINO DATI JSON
+// BACKUP JSON
 document.getElementById("btn-esporta").addEventListener("click", () => {
   const datiBackup = {
     farmaci: JSON.parse(localStorage.getItem("farmaci")) || [],
     appuntamenti: JSON.parse(localStorage.getItem("appuntamenti")) || [],
     documenti: JSON.parse(localStorage.getItem("documenti_salute")) || [],
   };
-
   const dataStr =
     "data:text/json;charset=utf-8," +
     encodeURIComponent(JSON.stringify(datiBackup, null, 2));
-  const downloadAnchor = document.createElement("a");
-  downloadAnchor.setAttribute("href", dataStr);
-  downloadAnchor.setAttribute(
+  const anchor = document.createElement("a");
+  anchor.setAttribute("href", dataStr);
+  anchor.setAttribute(
     "download",
     `backup_salute_${new Date().toISOString().slice(0, 10)}.json`,
   );
-  document.body.appendChild(downloadAnchor);
-  downloadAnchor.click();
-  downloadAnchor.remove();
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
 });
 
 document.getElementById("file-importa").addEventListener("change", (e) => {
   const file = e.target.files[0];
   if (!file) return;
-
   const reader = new FileReader();
   reader.onload = function (evt) {
     try {
-      const datiImportati = JSON.parse(evt.target.result);
-      if (datiImportati.farmaci)
-        localStorage.setItem("farmaci", JSON.stringify(datiImportati.farmaci));
-      if (datiImportati.appuntamenti)
-        localStorage.setItem(
-          "appuntamenti",
-          JSON.stringify(datiImportati.appuntamenti),
-        );
-      if (datiImportati.documenti)
+      const dati = JSON.parse(evt.target.result);
+      if (dati.farmaci)
+        localStorage.setItem("farmaci", JSON.stringify(dati.farmaci));
+      if (dati.appuntamenti)
+        localStorage.setItem("appuntamenti", JSON.stringify(dati.appuntamenti));
+      if (dati.documenti)
         localStorage.setItem(
           "documenti_salute",
-          JSON.stringify(datiImportati.documenti),
+          JSON.stringify(dati.documenti),
         );
-
       alert("Backup ripristinato con successo!");
       location.reload();
     } catch (err) {
-      alert(
-        "Errore nel file di backup. Assicurati che sia un file JSON valido.",
-      );
+      alert("Errore nel file di backup.");
     }
   };
   reader.readAsText(file);
 });
 
-// Caricamento iniziale
 impostaSaluto();
 salvaERendendiFarmaci();
 salvaERendendiAppuntamenti();

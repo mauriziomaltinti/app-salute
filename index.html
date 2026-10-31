@@ -13,7 +13,7 @@
     <meta name="theme-color" content="#0ea5e9" />
   </head>
   <body>
-    <!-- Header con Benvenuto Personalizzato e Tema Giorno/Notte -->
+    <!-- Header con Benvenuto e Tema Giorno/Notte -->
     <header class="app-header">
       <div class="header-top">
         <h1 id="app-saluto">🏥 Salute & Promemoria</h1>
@@ -29,27 +29,11 @@
     </header>
 
     <main class="container">
-      <!-- Box Riepilogo Giornaliero e Sincronizzazione Calendario -->
+      <!-- Box Riepilogo Giornaliero -->
       <section class="card summary-card">
         <h2>☀️ Oggi per te</h2>
         <div id="riepilogo-oggi" class="summary-content">
           <!-- Inserito dinamicamente via JS -->
-        </div>
-        <!-- Pulsante Calendario ben visibile in alto -->
-        <div
-          style="
-            margin-top: 1rem;
-            border-top: 1px solid var(--border);
-            padding-top: 0.75rem;
-          "
-        >
-          <button
-            id="btn-sync-ics"
-            class="btn"
-            style="background-color: var(--success); color: white; width: 100%"
-          >
-            📅 Sincronizza Calendario Samsung (.ics)
-          </button>
         </div>
       </section>
 
@@ -84,7 +68,6 @@
               <option value="Al bisogno">Al bisogno</option>
             </select>
           </div>
-          <!-- Selettore giorno settimana (se 1 volta a settimana) -->
           <select id="giorno-settimana" style="display: none">
             <option value="Lunedì">Ogni Lunedì</option>
             <option value="Martedì">Ogni Martedì</option>
@@ -94,13 +77,11 @@
             <option value="Sabato">Ogni Sabato</option>
             <option value="Domenica">Ogni Domenica</option>
           </select>
-          <!-- Campo Note / Variazione futura -->
           <input
             type="text"
             id="note-farmaco"
-            placeholder="Note o cambio dosaggio futuro (es. 1 anno poi 1/2 compressa)"
+            placeholder="Note o cambio dosaggio futuro"
           />
-
           <button type="submit" class="btn primary">Aggiungi Farmaco</button>
         </form>
         <ul id="lista-farmaci" class="data-list"></ul>
@@ -123,21 +104,19 @@
         <ul id="lista-appuntamenti" class="data-list"></ul>
       </section>
 
-      <!-- Sezione Documenti PDF con Filtro Ricerca -->
+      <!-- Sezione Documenti PDF -->
       <section class="card">
         <h2>📄 Referti e Lettere di Dimissione</h2>
         <form id="form-documento" class="form-grid">
           <input
             type="text"
             id="nome-doc"
-            placeholder="Descrizione documento (es. Dimissioni Ospedale)"
+            placeholder="Descrizione documento"
             required
           />
           <input type="file" id="file-pdf" accept="application/pdf" required />
           <button type="submit" class="btn primary">Carica PDF</button>
         </form>
-
-        <!-- Campo Filtro Ricerca Documenti -->
         <div style="margin-bottom: 0.75rem">
           <input
             type="text"
@@ -145,15 +124,14 @@
             placeholder="🔍 Cerca tra i documenti salvati..."
           />
         </div>
-
         <ul id="lista-documenti" class="data-list"></ul>
       </section>
 
-      <!-- Sezione Backup e Sicurezza Dati -->
+      <!-- Sezione Backup -->
       <section class="card">
         <h2>💾 Sicurezza e Backup Dati</h2>
         <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0">
-          Salva una copia dei dati o ripristinala se cambi dispositivo.
+          Salva una copia dei dati o ripristinala.
         </p>
         <div class="backup-card">
           <button id="btn-esporta" class="btn primary">
