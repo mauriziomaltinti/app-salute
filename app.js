@@ -116,7 +116,7 @@ window.eliminaFarmaco = function (index) {
   salvaERendendiFarmaci();
 };
 
-// Esporta singolo farmaco in .ics
+// Esporta singolo farmaco in .ics con frequenza corretta
 window.esportaSingoloFarmaco = function (index) {
   const f = farmaci[index];
   let dataEvento = new Date();
@@ -142,11 +142,13 @@ window.esportaSingoloFarmaco = function (index) {
     `DTEND:${dtend}`,
   ];
 
+  // Gestione corretta della regola di ripetizione
   if (f.frequenza === "Ogni giorno" || f.frequenza === "2-3 volte al giorno") {
     icsLines.push("RRULE:FREQ=DAILY");
   } else if (f.frequenza === "1 volta a settimana") {
     icsLines.push("RRULE:FREQ=WEEKLY");
   }
+  // Se è "Al bisogno", non aggiungiamo nessuna regola RRULE (resta un evento singolo)
 
   icsLines.push("END:VEVENT");
   icsLines.push("END:VCALENDAR");
