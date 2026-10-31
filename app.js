@@ -203,7 +203,7 @@ window.eliminaDocumento = function (index) {
   salvaERendendiDocumenti();
 };
 
-// GENERAZIONE FILE .ICS CORRETTO PER ORARI E MULTI-FARMACO
+// GENERAZIONE FILE .ICS ULTRA-COMPATIBILE PER SAMSUNG CALENDAR
 document.getElementById("btn-sync-ics").addEventListener("click", () => {
   if (farmaci.length === 0 && appuntamenti.length === 0) {
     alert(
@@ -212,73 +212,85 @@ document.getElementById("btn-sync-ics").addEventListener("click", () => {
     return;
   }
 
-  let icsContent =
-    "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//App Salute Personale//IT\nCALSCALE:GREGORIAN\nMETHOD:PUBLISH\n";
+  // Intestazione standard RFC 5545
+  let icsLines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Salute App//IT",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+  ];
 
-  // Funzione di supporto per formattare la data nel formato ICS corretto (YYYYMMDDTHHMMSSZ)
-  function formattaDataICS(dataObj) {
-    const anno = dataObj.getUTCFullYear();
-    const mese = String(dataObj.getUTCMonth() + 1).padStart(2, "0");
-    const giorno = String(dataObj.getUTCDate()).padStart(2, "0");
-    const ore = String(dataObj.getUTCHours()).padStart(2, "0");
+  // Funzione per formattare la data nel formato compatto UTC (es. 20261101T090000Z)
+  function formattaData(dataObj) {
+    const yyyy = dataObj.getUTCFullYear();
+    const mm = String(dataObj.getUTCMonth() + 1).padStart(2, "0");
+    const dd = String(dataObj.getUTCDate()).padStart(2, "0");
+    const hh = String(dataObj.getUTCHours()).padStart(2, "0");
     const min = String(dataObj.getUTCMinutes()).padStart(2, "0");
-    const sec = String(dataObj.getUTCSeconds()).padStart(2, "0");
-    return `${anno}${mese}${giorno}T${ore}${min}${sec}Z`;
+    const ss = String(dataObj.getUTCSeconds()).padStart(2, "0");
+    return `${yyyy}${mm}${dd}T${hh}${min}${ss}Z`;
   }
 
-  // Aggiungi Farmaci con orari corretti
+  // 1. Aggiungiamo ogni singolo farmaco
   farmaci.forEach((f) => {
     let dataEvento = new Date();
     if (f.ora) {
-      const [ore, min] = f.ora.split(":");
-      dataEvento.setHours(parseInt(ore, 10), parseInt(min, 10), 0);
+      const parti = f.ora.split(":");
+      dataEvento.setHours(parseInt(parti[0], 10), parseInt(parti[1], 10), 0);
     } else {
       dataEvento.setHours(9, 0, 0);
     }
 
-    let dataInizioStr = formattaDataICS(dataEvento);
-    // Durata fittizia di 15 minuti per l'evento
-    let dataFineObj = new Date(dataEvento.getTime() + 15 * 60000);
-    let dataFineStr = formattaDataICS(dataFineObj);
+    let dtstart = formattaData(dataEvento);
+    let dataFine = new Date(dataEvento.getTime() + 15 * 60000); // 15 min di durata
+    let dtend = formattaData(dataFine);
 
-    icsContent += "BEGIN:VEVENT\n";
-    icsContent += `SUMMARY:💊 Assumi ${f.nome} (${f.dosaggio})\n`;
-    icsContent += `DESCRIPTION:Dosaggio: ${f.dosaggio} - Frequenza: ${f.frequenza} - Note: ${f.note || "Nessuna"}\n`;
-    icsContent += `DTSTART:${dataInizioStr}\n`;
-    icsContent += `DTEND:${dataFineStr}\n`;
+    icsLines.push("BEGIN:VEVENT");
+    icsLines.push(`SUMMARY:💊 Assumi ${f.nome} (${f.dosaggio})`);
+    icsLines.push(
+      `DESCRIPTION:Dosaggio: ${f.dosaggio} - Frequenza: ${f.frequenza} - Note: ${f.note || "Nessuna"}`,
+    );
+    icsLines.push(`DTSTART:${dtstart}`);
+    icsLines.push(`DTEND:${dtend}`);
 
     if (
       f.frequenza === "Ogni giorno" ||
       f.frequenza === "2-3 volte al giorno"
     ) {
-      icsContent += "RRULE:FREQ=DAILY\n";
+      icsLines.push("RRULE:FREQ=DAILY");
     } else if (f.frequenza === "1 volta a settimana") {
-      icsContent += "RRULE:FREQ=WEEKLY\n";
+      icsLines.push("RRULE:FREQ=WEEKLY");
     }
-    icsContent += "END:VEVENT\n";
+    icsLines.push("END:VEVENT");
   });
 
-  // Aggiungi Appuntamenti con data/ora esatta
+  // 2. Aggiungiamo ogni appuntamento/visita
   appuntamenti.forEach((a) => {
     let d = new Date(a.data);
     if (!isNaN(d)) {
-      let dataInizioStr = formattaDataICS(d);
-      let dataFineObj = new Date(d.getTime() + 30 * 60000); // 30 minuti di durata
-      let dataFineStr = formattaDataICS(dataFineObj);
+      let dtstart = formattaData(d);
+      let dataFine = new Date(d.getTime() + 30 * 60000); // 30 min di durata
+      let dtend = formattaData(dataFine);
 
-      icsContent += "BEGIN:VEVENT\n";
-      icsContent += `SUMMARY:📅 Visita: ${a.titolo}\n`;
-      icsContent += `DESCRIPTION:Visita medica presso ${a.luogo}\n`;
-      icsContent += `LOCATION:${a.luogo}\n`;
-      icsContent += `DTSTART:${dataInizioStr}\n`;
-      icsContent += `DTEND:${dataFineStr}\n`;
-      icsContent += "END:VEVENT\n";
+      icsLines.push("BEGIN:VEVENT");
+      icsLines.push(`SUMMARY:📅 Visita: ${a.titolo}`);
+      icsLines.push(
+        `DESCRIPTION:Visita medica presso ${a.luogo || "Non specificato"}`,
+      );
+      icsLines.push(`LOCATION:${a.luogo || "Non specificato"}`);
+      icsLines.push(`DTSTART:${dtstart}`);
+      icsLines.push(`DTEND:${dtend}`);
+      icsLines.push("END:VEVENT");
     }
   });
 
-  icsContent += "END:VCALENDAR";
+  icsLines.push("END:VCALENDAR");
 
-  // Scarica il file .ics
+  // Uniamo le righe con il ritorno a capo standard del protocollo (\r\n)
+  const icsContent = icsLines.join("\r\n");
+
+  // Creazione e download del file
   const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
   const url = window.URL.createObjectURL(blob);
   const anchor = document.createElement("a");
@@ -289,9 +301,7 @@ document.getElementById("btn-sync-ics").addEventListener("click", () => {
   anchor.remove();
   window.URL.revokeObjectURL(url);
 
-  alert(
-    "File di calendario aggiornato con tutti i farmaci e gli orari corretti!",
-  );
+  alert("File di calendario generato correttamente! Aprilo sul Samsung.");
 });
 
 // RIEPILOGO GIORNALIERO (OGGI)
