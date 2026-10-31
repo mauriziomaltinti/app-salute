@@ -203,7 +203,7 @@ window.eliminaDocumento = function (index) {
   salvaERendendiDocumenti();
 };
 
-// GENERAZIONE FILE .ICS ULTRA-COMPATIBILE PER SAMSUNG CALENDAR
+// GENERAZIONE FILE .ICS COMPATIBILE CON SAMSUNG
 document.getElementById("btn-sync-ics").addEventListener("click", () => {
   if (farmaci.length === 0 && appuntamenti.length === 0) {
     alert(
@@ -212,7 +212,6 @@ document.getElementById("btn-sync-ics").addEventListener("click", () => {
     return;
   }
 
-  // Intestazione standard RFC 5545
   let icsLines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
@@ -221,7 +220,6 @@ document.getElementById("btn-sync-ics").addEventListener("click", () => {
     "METHOD:PUBLISH",
   ];
 
-  // Funzione per formattare la data nel formato compatto UTC (es. 20261101T090000Z)
   function formattaData(dataObj) {
     const yyyy = dataObj.getUTCFullYear();
     const mm = String(dataObj.getUTCMonth() + 1).padStart(2, "0");
@@ -232,7 +230,7 @@ document.getElementById("btn-sync-ics").addEventListener("click", () => {
     return `${yyyy}${mm}${dd}T${hh}${min}${ss}Z`;
   }
 
-  // 1. Aggiungiamo ogni singolo farmaco
+  // 1. Aggiunta Farmaci
   farmaci.forEach((f) => {
     let dataEvento = new Date();
     if (f.ora) {
@@ -243,13 +241,13 @@ document.getElementById("btn-sync-ics").addEventListener("click", () => {
     }
 
     let dtstart = formattaData(dataEvento);
-    let dataFine = new Date(dataEvento.getTime() + 15 * 60000); // 15 min di durata
+    let dataFine = new Date(dataEvento.getTime() + 15 * 60000);
     let dtend = formattaData(dataFine);
 
     icsLines.push("BEGIN:VEVENT");
-    icsLines.push(`SUMMARY:💊 Assumi ${f.nome} (${f.dosaggio})`);
+    icsLines.push(`SUMMARY:Assumi ${f.nome} ${f.dosaggio}`);
     icsLines.push(
-      `DESCRIPTION:Dosaggio: ${f.dosaggio} - Frequenza: ${f.frequenza} - Note: ${f.note || "Nessuna"}`,
+      `DESCRIPTION:Dosaggio ${f.dosaggio} - Frequenza ${f.frequenza}`,
     );
     icsLines.push(`DTSTART:${dtstart}`);
     icsLines.push(`DTEND:${dtend}`);
@@ -265,19 +263,17 @@ document.getElementById("btn-sync-ics").addEventListener("click", () => {
     icsLines.push("END:VEVENT");
   });
 
-  // 2. Aggiungiamo ogni appuntamento/visita
+  // 2. Aggiunta Appuntamenti (Visite)
   appuntamenti.forEach((a) => {
     let d = new Date(a.data);
     if (!isNaN(d)) {
       let dtstart = formattaData(d);
-      let dataFine = new Date(d.getTime() + 30 * 60000); // 30 min di durata
+      let dataFine = new Date(d.getTime() + 30 * 60000);
       let dtend = formattaData(dataFine);
 
       icsLines.push("BEGIN:VEVENT");
-      icsLines.push(`SUMMARY:📅 Visita: ${a.titolo}`);
-      icsLines.push(
-        `DESCRIPTION:Visita medica presso ${a.luogo || "Non specificato"}`,
-      );
+      icsLines.push(`SUMMARY:Visita ${a.titolo}`);
+      icsLines.push(`DESCRIPTION:Presso ${a.luogo || "Studio medico"}`);
       icsLines.push(`LOCATION:${a.luogo || "Non specificato"}`);
       icsLines.push(`DTSTART:${dtstart}`);
       icsLines.push(`DTEND:${dtend}`);
@@ -287,10 +283,8 @@ document.getElementById("btn-sync-ics").addEventListener("click", () => {
 
   icsLines.push("END:VCALENDAR");
 
-  // Uniamo le righe con il ritorno a capo standard del protocollo (\r\n)
   const icsContent = icsLines.join("\r\n");
 
-  // Creazione e download del file
   const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
   const url = window.URL.createObjectURL(blob);
   const anchor = document.createElement("a");
@@ -301,7 +295,7 @@ document.getElementById("btn-sync-ics").addEventListener("click", () => {
   anchor.remove();
   window.URL.revokeObjectURL(url);
 
-  alert("File di calendario generato correttamente! Aprilo sul Samsung.");
+  alert("File di calendario generato con successo!");
 });
 
 // RIEPILOGO GIORNALIERO (OGGI)
