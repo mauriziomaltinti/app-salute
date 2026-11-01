@@ -178,25 +178,35 @@ window.esportaSingoloFarmaco = function (index) {
   );
 };
 
-// ESPORTA TUTTE LE TERAPIE IN UN UNICO FILE .ICS CUMULATIVO
+// ESPORTA TUTTE LE TERAPIE IN UN UNICO FILE CON ORDINAMENTO CORRETTO
 window.esportaTerapieRaggruppate = function () {
   if (farmaci.length === 0) {
     alert("Aggiungi prima almeno un farmaco.");
     return;
   }
 
-  // Estraiamo tutti gli orari unici ordinandoli
+  // Estraiamo tutti gli orari unici e li ordiniamo cronologicamente (dalle 00:00 alle 23:59)
   const orariUnici = [
     ...new Set(farmaci.map((f) => (f.ora || "08:00").trim())),
-  ].sort();
+  ].sort((a, b) => {
+    const [oreA, minA] = a.split(":").map(Number);
+    const [oreB, minB] = b.split(":").map(Number);
+    return oreA * 60 + minA - (oreB * 60 + minB);
+  });
 
   if (orariUnici.length === 0) {
     alert("Nessun orario trovato nei farmaci inseriti.");
     return;
   }
 
-  // Costruiamo un unico file ICS con più eventi (uno per ogni orario)
-  let icsLines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Salute App//IT"];
+  // Costruiamo un unico file ICS con tutti gli eventi raggruppati in ordine
+  let icsLines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Salute App//IT",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+  ];
 
   orariUnici.forEach((ora) => {
     let dataEvento = new Date();
@@ -223,11 +233,24 @@ window.esportaTerapieRaggruppate = function () {
 
   icsLines.push("END:VCALENDAR");
 
-  // Scarichiamo un unico file che contiene tutti gli orari
-  scaricaFileIcs(icsLines.join("\r\n"), `Tutte_le_Terapie.ics`);
+  // Uniamo tutto in una stringa di testo pulita e scarichiamo il file unico
+  const fileContent = icsLines.join("\r\n");
+  const blob = new Blob([fileContent], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "Tutte_le_Terapie.ics";
+
+  document.body.appendChild(link);
+  link.click();
+
+  setTimeout(() => {
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, 100);
 
   alert(
-    `Sincronizzazione completata! Creato 1 unico file con gli orari: ${orariUnici.join(", ")}`,
+    `Sincronizzazione completata! Creato 1 solo file con gli orari: ${orariUnici.join(", ")}`,
   );
 };
 
