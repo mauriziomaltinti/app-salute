@@ -1,4 +1,4 @@
-const CACHE_NAME = "salute-v8";
+const CACHE_NAME = "salute-v11";
 const urlsToCache = [
   "./index.html",
   "./style.css",
