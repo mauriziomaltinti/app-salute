@@ -178,6 +178,7 @@ window.esportaSingoloFarmaco = function (index) {
   );
 };
 
+// ESPORTA TUTTE LE TERAPIE IN UN UNICO FILE .ICS COMPATIBILE AL 100% CON ANDROID
 window.esportaTerapieRaggruppate = function () {
   if (!window.farmaci || farmaci.length === 0) {
     alert("Aggiungi prima almeno un farmaco.");
@@ -185,7 +186,7 @@ window.esportaTerapieRaggruppate = function () {
   }
 
   try {
-    // Estraiamo tutti gli orari, pulendo punti o spazi
+    // 1. Estrazione e normalizzazione di tutti gli orari unici
     const orariUnici = [
       ...new Set(
         farmaci.map((f) => {
@@ -205,6 +206,7 @@ window.esportaTerapieRaggruppate = function () {
       return;
     }
 
+    // 2. Costruzione della struttura standard RFC 5545 per iCalendar
     let icsLines = [
       "BEGIN:VCALENDAR",
       "VERSION:2.0",
@@ -213,7 +215,7 @@ window.esportaTerapieRaggruppate = function () {
       "METHOD:PUBLISH",
     ];
 
-    orariUnici.forEach((ora) => {
+    orariUnici.forEach((ora, index) => {
       let dataEvento = new Date();
       const parti = ora.split(":");
       let ore = parseInt(parti[0], 10) || 8;
@@ -225,10 +227,15 @@ window.esportaTerapieRaggruppate = function () {
       let dataFine = new Date(dataEvento.getTime() + 15 * 60000);
       let dtend = formattaData(dataFine);
 
+      // UID univoco per ogni evento per evitare conflitti nel calendario
+      let uid = `terapia-${index}-${Date.now()}@saluteapp.local`;
+
       icsLines.push(
         "BEGIN:VEVENT",
+        `UID:${uid}`,
+        `DTSTAMP:${formattaData(new Date())}`,
         `SUMMARY:💊 Terapia ore ${ora}`,
-        `DESCRIPTION:Apri l'app Salute per controllare le assunzioni programmate.`,
+        `DESCRIPTION:Assunzione farmaci programmata ore ${ora}.`,
         `DTSTART:${dtstart}`,
         `DTEND:${dtend}`,
         "RRULE:FREQ=DAILY",
@@ -238,23 +245,30 @@ window.esportaTerapieRaggruppate = function () {
 
     icsLines.push("END:VCALENDAR");
 
+    // 3. Generazione pulita del file tramite Blob e download diretto
     const fileContent = icsLines.join("\r\n");
-    const encodedUri =
-      "data:text/calendar;charset=utf-8," + encodeURIComponent(fileContent);
+    const blob = new Blob([fileContent], {
+      type: "text/calendar;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
 
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "Tutte_le_Terapie.ics");
+    link.href = url;
+    link.download = "Tutte_le_Terapie.ics";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
 
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 1000);
+
     alert(
-      `Sincronizzazione completata! Orari inclusi: ${orariUnici.join(", ")}`,
+      `File generato con successo! Orari inclusi: ${orariUnici.join(", ")}`,
     );
   } catch (err) {
-    console.error("Errore:", err);
-    alert("Errore durante la generazione del file.");
+    console.error("Errore ICS:", err);
+    alert("Errore durante la creazione del file di calendario.");
   }
 };
 
