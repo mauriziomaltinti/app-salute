@@ -18,7 +18,7 @@ self.addEventListener("push", (e) => {
   );
 });
 
-const CACHE_NAME = "salute-v2";
+const CACHE_NAME = "salute-v3"; // <-- Modificato da v2 a v3 per forzare l'aggiornamento
 const urlsToCache = [
   "./index.html",
   "./style.css",
