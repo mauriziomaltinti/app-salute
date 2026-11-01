@@ -178,44 +178,57 @@ window.esportaSingoloFarmaco = function (index) {
   );
 };
 
-// ESPORTA TUTTE LE TERAPIE RAGGRUPPATE PER ORARIO IN UN SOLO CLICK
+// ESPORTA TUTTE LE TERAPIE IN UN UNICO FILE .ICS CUMULATIVO
 window.esportaTerapieRaggruppate = function () {
   if (farmaci.length === 0) {
-    alert("Aggiungi prima un farmaco.");
+    alert("Aggiungi prima almeno un farmaco.");
     return;
   }
 
-  // Raggruppiamo gli orari unici
-  const orariUnici = [...new Set(farmaci.map((f) => f.ora || "08:00"))];
+  // Estraiamo tutti gli orari unici ordinandoli
+  const orariUnici = [
+    ...new Set(farmaci.map((f) => (f.ora || "08:00").trim())),
+  ].sort();
+
+  if (orariUnici.length === 0) {
+    alert("Nessun orario trovato nei farmaci inseriti.");
+    return;
+  }
+
+  // Costruiamo un unico file ICS con più eventi (uno per ogni orario)
+  let icsLines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Salute App//IT"];
 
   orariUnici.forEach((ora) => {
     let dataEvento = new Date();
     const parti = ora.split(":");
-    dataEvento.setHours(parseInt(parti[0], 10), parseInt(parti[1], 10), 0, 0);
+    let ore = parseInt(parti[0], 10) || 8;
+    let minuti = parseInt(parti[1], 10) || 0;
+
+    dataEvento.setHours(ore, minuti, 0, 0);
 
     let dtstart = formattaData(dataEvento);
     let dataFine = new Date(dataEvento.getTime() + 15 * 60000);
     let dtend = formattaData(dataFine);
 
-    let icsLines = [
-      "BEGIN:VCALENDAR",
-      "VERSION:2.0",
-      "PRODID:-//Salute App//IT",
+    icsLines.push(
       "BEGIN:VEVENT",
       `SUMMARY:💊 Terapia ore ${ora}`,
-      `DESCRIPTION:Apri l'app Salute per controllare le assunzioni.`,
+      `DESCRIPTION:Apri l'app Salute per controllare le assunzioni programmate.`,
       `DTSTART:${dtstart}`,
       `DTEND:${dtend}`,
       "RRULE:FREQ=DAILY",
       "END:VEVENT",
-      "END:VCALENDAR",
-    ];
-
-    scaricaFileIcs(
-      icsLines.join("\r\n"),
-      `Terapia_ore_${ora.replace(":", "")}.ics`,
     );
   });
+
+  icsLines.push("END:VCALENDAR");
+
+  // Scarichiamo un unico file che contiene tutti gli orari
+  scaricaFileIcs(icsLines.join("\r\n"), `Tutte_le_Terapie.ics`);
+
+  alert(
+    `Sincronizzazione completata! Creato 1 unico file con gli orari: ${orariUnici.join(", ")}`,
+  );
 };
 
 // GESTIONE APPUNTAMENTI
