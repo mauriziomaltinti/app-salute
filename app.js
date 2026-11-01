@@ -178,7 +178,6 @@ window.esportaSingoloFarmaco = function (index) {
   );
 };
 
-// ESPORTA TUTTE LE TERAPIE IN UN UNICO FILE (SICURO CONTRO GLI ERRORI)
 window.esportaTerapieRaggruppate = function () {
   if (!window.farmaci || farmaci.length === 0) {
     alert("Aggiungi prima almeno un farmaco.");
@@ -186,32 +185,26 @@ window.esportaTerapieRaggruppate = function () {
   }
 
   try {
-    // Normalizziamo ogni orario in modo sicuro, gestendo eventuali valori mancanti o scritti male
+    // Estraiamo tutti gli orari, pulendo punti o spazi
     const orariUnici = [
       ...new Set(
         farmaci.map((f) => {
           let oraStr =
             f && f.ora ? String(f.ora).trim().replace(".", ":") : "08:00";
-          if (!oraStr.includes(":")) oraStr = "08:00";
           return oraStr;
         }),
       ),
     ].sort((a, b) => {
-      const partiA = a.split(":");
-      const partiB = b.split(":");
-      const oreA = parseInt(partiA[0], 10) || 0;
-      const minA = parseInt(partiA[1], 10) || 0;
-      const oreB = parseInt(partiB[0], 10) || 0;
-      const minB = parseInt(partiB[1], 10) || 0;
-      return oreA * 60 + minA - (oreB * 60 + minB);
+      const [oreA, minA] = a.split(":").map(Number);
+      const [oreB, minB] = b.split(":").map(Number);
+      return oreA * 60 + (minA || 0) - (oreB * 60 + (minB || 0));
     });
 
     if (orariUnici.length === 0) {
-      alert("Nessun orario valido trovato nei farmaci.");
+      alert("Nessun orario trovato.");
       return;
     }
 
-    // Costruiamo il file ICS cumulativo
     let icsLines = [
       "BEGIN:VCALENDAR",
       "VERSION:2.0",
@@ -245,7 +238,6 @@ window.esportaTerapieRaggruppate = function () {
 
     icsLines.push("END:VCALENDAR");
 
-    // Download sicuro tramite Data URI
     const fileContent = icsLines.join("\r\n");
     const encodedUri =
       "data:text/calendar;charset=utf-8," + encodeURIComponent(fileContent);
@@ -261,10 +253,8 @@ window.esportaTerapieRaggruppate = function () {
       `Sincronizzazione completata! Orari inclusi: ${orariUnici.join(", ")}`,
     );
   } catch (err) {
-    console.error("Errore esportazione:", err);
-    alert(
-      "Si è verificato un errore durante la generazione del file. Controlla gli orari inseriti.",
-    );
+    console.error("Errore:", err);
+    alert("Errore durante la generazione del file.");
   }
 };
 
