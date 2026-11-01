@@ -125,7 +125,7 @@ window.eliminaFarmaco = function (index) {
   salvaERendendiFarmaci();
 };
 
-// ESPORTA NOTIFICA DISCRETA "TERAPIA ORE XX:XX" PER SINGOLO FARMACO O GRUPPO
+// ESPORTA NOTIFICA DISCRETA PER SINGOLO FARMACO
 window.esportaSingoloFarmaco = function (index) {
   const f = farmaci[index];
   const ora = f.ora || "08:00";
@@ -178,19 +178,23 @@ window.esportaSingoloFarmaco = function (index) {
   );
 };
 
-// ESPORTA TUTTE LE TERAPIE IN UN UNICO FILE CON ORDINAMENTO CORRETTO
+// UNICA FUNZIONE UNIFICATA PER ESPORTARE TUTTE LE TERAPIE IN UN UNICO FILE (.ICS CUMULATIVO)
 window.esportaTerapieRaggruppate = function () {
   if (farmaci.length === 0) {
     alert("Aggiungi prima almeno un farmaco.");
     return;
   }
 
-  // Estraiamo tutti gli orari unici e li ordiniamo cronologicamente (dalle 00:00 alle 23:59)
+  // Normalizza gli orari (sostituisce eventuali punti con i due punti) e li ordina cronologicamente
   const orariUnici = [
-    ...new Set(farmaci.map((f) => (f.ora || "08:00").trim())),
+    ...new Set(farmaci.map((f) => (f.ora || "08:00").trim().replace(".", ":"))),
   ].sort((a, b) => {
-    const [oreA, minA] = a.split(":").map(Number);
-    const [oreB, minB] = b.split(":").map(Number);
+    const partiA = a.split(":");
+    const partiB = b.split(":");
+    const oreA = parseInt(partiA[0], 10) || 0;
+    const minA = parseInt(partiA[1], 10) || 0;
+    const oreB = parseInt(partiB[0], 10) || 0;
+    const minB = parseInt(partiB[1], 10) || 0;
     return oreA * 60 + minA - (oreB * 60 + minB);
   });
 
@@ -199,7 +203,6 @@ window.esportaTerapieRaggruppate = function () {
     return;
   }
 
-  // Costruiamo un unico file ICS con tutti gli eventi raggruppati in ordine
   let icsLines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
@@ -233,21 +236,16 @@ window.esportaTerapieRaggruppate = function () {
 
   icsLines.push("END:VCALENDAR");
 
-  // Uniamo tutto in una stringa di testo pulita e scarichiamo il file unico
   const fileContent = icsLines.join("\r\n");
-  const blob = new Blob([fileContent], { type: "text/calendar;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "Tutte_le_Terapie.ics";
+  const encodedUri =
+    "data:text/calendar;charset=utf-8," + encodeURIComponent(fileContent);
 
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", "Tutte_le_Terapie.ics");
   document.body.appendChild(link);
   link.click();
-
-  setTimeout(() => {
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }, 100);
+  document.body.removeChild(link);
 
   alert(
     `Sincronizzazione completata! Creato 1 solo file con gli orari: ${orariUnici.join(", ")}`,
@@ -433,7 +431,7 @@ function aggiornaRiepilogoOggi() {
       '<p style="color: var(--text-muted);">Nessuna terapia o visita registrata per oggi. Giornata tranquilla! 😊</p>';
   } else {
     if (farmaciOggi.length > 0) {
-      htmlContent += `<p>💊 <strong>Farmaci oggi (${farmaciOggi.length}):</strong> ${farmaciOggi.map((f) => `${f.nome} (${f.dosaggio} - ore ${f.ora})`).join(", ")}</p>`;
+      htmlContent += `<p>💊 <strong>Farmaci oggi (${farmaciOggi.length}):</strong> ${farmaciOggi.map((f) => `${f.nome} (${f.dosaggio}, ore ${f.ora})`).join(", ")}</p>`;
     }
     if (appuntamentiOggi.length > 0) {
       htmlContent += `<p>📅 <strong>Visite oggi (${appuntamentiOggi.length}):</strong> ${appuntamentiOggi.map((a) => `${a.titolo} a ${a.luogo}`).join(", ")}</p>`;
@@ -501,57 +499,12 @@ navButtons.forEach((btn) => {
   btn.addEventListener("click", () => {
     const targetId = btn.getAttribute("data-target");
 
-    // Rimuovi la classe active da tutti i bottoni e sezioni
     navButtons.forEach((b) => b.classList.remove("active"));
     tabContents.forEach((t) => t.classList.remove("active"));
 
-    // Attiva il bottone e la sezione corrispondente
     btn.classList.add("active");
     document.getElementById(targetId).classList.add("active");
 
-    // Riporta la pagina in alto quando cambi scheda
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
 });
-
-// ESPORTA TUTTE LE TERAPIE RAGGRUPPATE PER ORARIO
-window.esportaTerapieRaggruppate = function () {
-  if (farmaci.length === 0) {
-    alert("Aggiungi prima almeno un farmaco.");
-    return;
-  }
-
-  // Raggruppiamo gli orari unici presenti nei farmaci
-  const orariUnici = [...new Set(farmaci.map((f) => f.ora || "08:00"))];
-
-  orariUnici.forEach((ora) => {
-    let dataEvento = new Date();
-    const parti = ora.split(":");
-    dataEvento.setHours(parseInt(parti[0], 10), parseInt(parti[1], 10), 0, 0);
-
-    let dtstart = formattaData(dataEvento);
-    let dataFine = new Date(dataEvento.getTime() + 15 * 60000);
-    let dtend = formattaData(dataFine);
-
-    let icsLines = [
-      "BEGIN:VCALENDAR",
-      "VERSION:2.0",
-      "PRODID:-//Salute App//IT",
-      "BEGIN:VEVENT",
-      `SUMMARY:💊 Terapia ore ${ora}`,
-      `DESCRIPTION:Apri l'app Salute per controllare le assunzioni.`,
-      `DTSTART:${dtstart}`,
-      `DTEND:${dtend}`,
-      "RRULE:FREQ=DAILY",
-      "END:VEVENT",
-      "END:VCALENDAR",
-    ];
-
-    scaricaFileIcs(
-      icsLines.join("\r\n"),
-      `Terapia_ore_${ora.replace(":", "")}.ics`,
-    );
-  });
-
-  alert("File di sincronizzazione per orario generati con successo!");
-};
