@@ -1,4 +1,4 @@
-// TEMA GIORNO / NOTTE
+// GESTIONE TEMA GIORNO / NOTTE
 const themeToggleBtn = document.getElementById("theme-toggle");
 const savedTheme = localStorage.getItem("theme");
 const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -17,7 +17,7 @@ themeToggleBtn.addEventListener("click", () => {
   localStorage.setItem("theme", isDark ? "dark" : "light");
 });
 
-// SALUTO DINAMICO
+// SALUTO DINAMICO ALL'AVVIO
 function impostaSaluto() {
   const salutoElem = document.getElementById("app-saluto");
   const oraAttuale = new Date().getHours();
@@ -33,6 +33,7 @@ function impostaSaluto() {
   salutoElem.textContent = saluto;
 }
 
+// REGISTRAZIONE SERVICE WORKER
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker
     .register("sw.js")
@@ -40,7 +41,7 @@ if ("serviceWorker" in navigator) {
     .catch((err) => console.error("Errore SW:", err));
 }
 
-// FORMATTAZIONE DATA ICS
+// FORMATTAZIONE DATA ICS COMPATIBILE SAMSUNG
 function formattaData(dataObj) {
   const yyyy = dataObj.getUTCFullYear();
   const mm = String(dataObj.getUTCMonth() + 1).padStart(2, "0");
@@ -82,9 +83,14 @@ function salvaERendendiFarmaci() {
     let notaHtml = f.note
       ? `<br><small style="color: var(--primary);">📝 Note: ${f.note}</small>`
       : "";
+    let colore = f.colore || "#0ea5e9";
 
     li.innerHTML = `
-      <span><strong>💊 ${f.nome}</strong> - ${f.dosaggio}<br><small style="color: var(--text-muted)">Ore: ${f.ora} (${dettaglioFreq})</small>${notaHtml}</span>
+      <span>
+        <span style="height: 12px; width: 12px; background-color: ${colore}; border-radius: 50%; display: inline-block; margin-right: 8px;"></span>
+        <strong>💊 ${f.nome}</strong> - ${f.dosaggio}<br>
+        <small style="color: var(--text-muted); margin-left: 20px;">Ore: ${f.ora} (${dettaglioFreq})</small>${notaHtml}
+      </span>
       <div class="item-actions">
         <button class="btn success" onclick="esportaSingoloFarmaco(${idx})" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">📅 Cal</button>
         <button class="btn-delete" onclick="eliminaFarmaco(${idx})">Elimina</button>
@@ -103,9 +109,12 @@ formFarmaco.addEventListener("submit", (e) => {
   const frequenza = frequenzaSelect.value;
   const giorno =
     frequenza === "1 volta a settimana" ? giornoSettimanaSelect.value : "";
+  const colore = document.getElementById("colore-farmaco")
+    ? document.getElementById("colore-farmaco").value
+    : "#0ea5e9";
   const note = document.getElementById("note-farmaco").value;
 
-  farmaci.push({ nome, dosaggio, ora, frequenza, giorno, note });
+  farmaci.push({ nome, dosaggio, ora, frequenza, giorno, colore, note });
   salvaERendendiFarmaci();
   formFarmaco.reset();
   giornoSettimanaSelect.style.display = "none";
@@ -116,11 +125,19 @@ window.eliminaFarmaco = function (index) {
   salvaERendendiFarmaci();
 };
 
-// Esporta singolo farmaco in .ics distinguendo 'Ogni giorno' da '1 volta a settimana'
+// ESPORTA NOTIFICA DISCRETA "TERAPIA ORE XX:XX" PER SINGOLO FARMACO O GRUPPO
 window.esportaSingoloFarmaco = function (index) {
   const f = farmaci[index];
+  const ora = f.ora || "08:00";
 
-  // Mappatura giorni della settimana per il formato standard ICS (RRULE BYDAY)
+  let dataEvento = new Date();
+  const parti = ora.split(":");
+  dataEvento.setHours(parseInt(parti[0], 10), parseInt(parti[1], 10), 0, 0);
+
+  let dtstart = formattaData(dataEvento);
+  let dataFine = new Date(dataEvento.getTime() + 15 * 60000);
+  let dtend = formattaData(dataFine);
+
   const mappaGiorniICS = {
     Lunedì: "MO",
     Martedì: "TU",
@@ -131,35 +148,21 @@ window.esportaSingoloFarmaco = function (index) {
     Domenica: "SU",
   };
 
-  let dataEvento = new Date();
-  if (f.ora) {
-    const parti = f.ora.split(":");
-    dataEvento.setHours(parseInt(parti[0], 10), parseInt(parti[1], 10), 0, 0);
-  } else {
-    dataEvento.setHours(9, 0, 0, 0);
-  }
-
-  let dtstart = formattaData(dataEvento);
-  let dataFine = new Date(dataEvento.getTime() + 15 * 60000); // Durata 15 minuti
-  let dtend = formattaData(dataFine);
-
   let icsLines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
     "PRODID:-//Salute App//IT",
     "BEGIN:VEVENT",
-    `SUMMARY:Assumi ${f.nome} ${f.dosaggio}`,
-    `DESCRIPTION:Dosaggio ${f.dosaggio} - Frequenza ${f.frequenza}${f.giorno ? " (" + f.giorno + ")" : ""} - Note: ${f.note || "Nessuna"}`,
+    `SUMMARY:💊 Terapia ore ${ora}`,
+    `DESCRIPTION:Apri l'app Salute per controllare le assunzioni.`,
     `DTSTART:${dtstart}`,
     `DTEND:${dtend}`,
   ];
 
-  // Gestione precisa delle regole di ripetizione per il Calendario Samsung
   if (f.frequenza === "Ogni giorno" || f.frequenza === "2-3 volte al giorno") {
     icsLines.push("RRULE:FREQ=DAILY");
   } else if (f.frequenza === "1 volta a settimana") {
     if (f.giorno && mappaGiorniICS[f.giorno]) {
-      // Imposta la ripetizione settimanale ESATTAMENTE nel giorno scelto (es. BYDAY=MO per Lunedì)
       icsLines.push(`RRULE:FREQ=WEEKLY;BYDAY=${mappaGiorniICS[f.giorno]}`);
     } else {
       icsLines.push("RRULE:FREQ=WEEKLY");
@@ -169,7 +172,50 @@ window.esportaSingoloFarmaco = function (index) {
   icsLines.push("END:VEVENT");
   icsLines.push("END:VCALENDAR");
 
-  scaricaFileIcs(icsLines.join("\r\n"), `${f.nome.replace(/\s+/g, "_")}.ics`);
+  scaricaFileIcs(
+    icsLines.join("\r\n"),
+    `Terapia_ore_${ora.replace(":", "")}.ics`,
+  );
+};
+
+// ESPORTA TUTTE LE TERAPIE RAGGRUPPATE PER ORARIO IN UN SOLO CLICK
+window.esportaTerapieRaggruppate = function () {
+  if (farmaci.length === 0) {
+    alert("Aggiungi prima un farmaco.");
+    return;
+  }
+
+  // Raggruppiamo gli orari unici
+  const orariUnici = [...new Set(farmaci.map((f) => f.ora || "08:00"))];
+
+  orariUnici.forEach((ora) => {
+    let dataEvento = new Date();
+    const parti = ora.split(":");
+    dataEvento.setHours(parseInt(parti[0], 10), parseInt(parti[1], 10), 0, 0);
+
+    let dtstart = formattaData(dataEvento);
+    let dataFine = new Date(dataEvento.getTime() + 15 * 60000);
+    let dtend = formattaData(dataFine);
+
+    let icsLines = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//Salute App//IT",
+      "BEGIN:VEVENT",
+      `SUMMARY:💊 Terapia ore ${ora}`,
+      `DESCRIPTION:Apri l'app Salute per controllare le assunzioni.`,
+      `DTSTART:${dtstart}`,
+      `DTEND:${dtend}`,
+      "RRULE:FREQ=DAILY",
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ];
+
+    scaricaFileIcs(
+      icsLines.join("\r\n"),
+      `Terapia_ore_${ora.replace(":", "")}.ics`,
+    );
+  });
 };
 
 // GESTIONE APPUNTAMENTI
@@ -216,7 +262,6 @@ window.eliminaAppuntamento = function (index) {
   salvaERendendiAppuntamenti();
 };
 
-// Esporta singolo appuntamento in .ics
 window.esportaSingoloAppuntamento = function (index) {
   const a = appuntamenti[index];
   let d = new Date(a.data);
@@ -243,7 +288,7 @@ window.esportaSingoloAppuntamento = function (index) {
   scaricaFileIcs(icsLines.join("\r\n"), `${a.titolo.replace(/\s+/g, "_")}.ics`);
 };
 
-// Funzione di utilità per il download del file
+// DOWNLOAD FILE ICS
 function scaricaFileIcs(content, filename) {
   const blob = new Blob([content], { type: "text/calendar;charset=utf-8" });
   const url = window.URL.createObjectURL(blob);
@@ -411,3 +456,66 @@ impostaSaluto();
 salvaERendendiFarmaci();
 salvaERendendiAppuntamenti();
 salvaERendendiDocumenti();
+
+// GESTIONE CAMBIO SCHEDA (NAVIGAZIONE IN BASSO)
+const navButtons = document.querySelectorAll(".nav-btn");
+const tabContents = document.querySelectorAll(".tab-content");
+
+navButtons.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const targetId = btn.getAttribute("data-target");
+
+    // Rimuovi la classe active da tutti i bottoni e sezioni
+    navButtons.forEach((b) => b.classList.remove("active"));
+    tabContents.forEach((t) => t.classList.remove("active"));
+
+    // Attiva il bottone e la sezione corrispondente
+    btn.classList.add("active");
+    document.getElementById(targetId).classList.add("active");
+
+    // Riporta la pagina in alto quando cambi scheda
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+});
+
+// ESPORTA TUTTE LE TERAPIE RAGGRUPPATE PER ORARIO
+window.esportaTerapieRaggruppate = function () {
+  if (farmaci.length === 0) {
+    alert("Aggiungi prima almeno un farmaco.");
+    return;
+  }
+
+  // Raggruppiamo gli orari unici presenti nei farmaci
+  const orariUnici = [...new Set(farmaci.map((f) => f.ora || "08:00"))];
+
+  orariUnici.forEach((ora) => {
+    let dataEvento = new Date();
+    const parti = ora.split(":");
+    dataEvento.setHours(parseInt(parti[0], 10), parseInt(parti[1], 10), 0, 0);
+
+    let dtstart = formattaData(dataEvento);
+    let dataFine = new Date(dataEvento.getTime() + 15 * 60000);
+    let dtend = formattaData(dataFine);
+
+    let icsLines = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//Salute App//IT",
+      "BEGIN:VEVENT",
+      `SUMMARY:💊 Terapia ore ${ora}`,
+      `DESCRIPTION:Apri l'app Salute per controllare le assunzioni.`,
+      `DTSTART:${dtstart}`,
+      `DTEND:${dtend}`,
+      "RRULE:FREQ=DAILY",
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ];
+
+    scaricaFileIcs(
+      icsLines.join("\r\n"),
+      `Terapia_ore_${ora.replace(":", "")}.ics`,
+    );
+  });
+
+  alert("File di sincronizzazione per orario generati con successo!");
+};
