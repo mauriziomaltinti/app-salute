@@ -178,78 +178,94 @@ window.esportaSingoloFarmaco = function (index) {
   );
 };
 
-// UNICA FUNZIONE UNIFICATA PER ESPORTARE TUTTE LE TERAPIE IN UN UNICO FILE (.ICS CUMULATIVO)
+// ESPORTA TUTTE LE TERAPIE IN UN UNICO FILE (SICURO CONTRO GLI ERRORI)
 window.esportaTerapieRaggruppate = function () {
-  if (farmaci.length === 0) {
+  if (!window.farmaci || farmaci.length === 0) {
     alert("Aggiungi prima almeno un farmaco.");
     return;
   }
 
-  // Normalizza gli orari (sostituisce eventuali punti con i due punti) e li ordina cronologicamente
-  const orariUnici = [
-    ...new Set(farmaci.map((f) => (f.ora || "08:00").trim().replace(".", ":"))),
-  ].sort((a, b) => {
-    const partiA = a.split(":");
-    const partiB = b.split(":");
-    const oreA = parseInt(partiA[0], 10) || 0;
-    const minA = parseInt(partiA[1], 10) || 0;
-    const oreB = parseInt(partiB[0], 10) || 0;
-    const minB = parseInt(partiB[1], 10) || 0;
-    return oreA * 60 + minA - (oreB * 60 + minB);
-  });
+  try {
+    // Normalizziamo ogni orario in modo sicuro, gestendo eventuali valori mancanti o scritti male
+    const orariUnici = [
+      ...new Set(
+        farmaci.map((f) => {
+          let oraStr =
+            f && f.ora ? String(f.ora).trim().replace(".", ":") : "08:00";
+          if (!oraStr.includes(":")) oraStr = "08:00";
+          return oraStr;
+        }),
+      ),
+    ].sort((a, b) => {
+      const partiA = a.split(":");
+      const partiB = b.split(":");
+      const oreA = parseInt(partiA[0], 10) || 0;
+      const minA = parseInt(partiA[1], 10) || 0;
+      const oreB = parseInt(partiB[0], 10) || 0;
+      const minB = parseInt(partiB[1], 10) || 0;
+      return oreA * 60 + minA - (oreB * 60 + minB);
+    });
 
-  if (orariUnici.length === 0) {
-    alert("Nessun orario trovato nei farmaci inseriti.");
-    return;
-  }
+    if (orariUnici.length === 0) {
+      alert("Nessun orario valido trovato nei farmaci.");
+      return;
+    }
 
-  let icsLines = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//Salute App//IT",
-    "CALSCALE:GREGORIAN",
-    "METHOD:PUBLISH",
-  ];
+    // Costruiamo il file ICS cumulativo
+    let icsLines = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//Salute App//IT",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
+    ];
 
-  orariUnici.forEach((ora) => {
-    let dataEvento = new Date();
-    const parti = ora.split(":");
-    let ore = parseInt(parti[0], 10) || 8;
-    let minuti = parseInt(parti[1], 10) || 0;
+    orariUnici.forEach((ora) => {
+      let dataEvento = new Date();
+      const parti = ora.split(":");
+      let ore = parseInt(parti[0], 10) || 8;
+      let minuti = parseInt(parti[1], 10) || 0;
 
-    dataEvento.setHours(ore, minuti, 0, 0);
+      dataEvento.setHours(ore, minuti, 0, 0);
 
-    let dtstart = formattaData(dataEvento);
-    let dataFine = new Date(dataEvento.getTime() + 15 * 60000);
-    let dtend = formattaData(dataFine);
+      let dtstart = formattaData(dataEvento);
+      let dataFine = new Date(dataEvento.getTime() + 15 * 60000);
+      let dtend = formattaData(dataFine);
 
-    icsLines.push(
-      "BEGIN:VEVENT",
-      `SUMMARY:💊 Terapia ore ${ora}`,
-      `DESCRIPTION:Apri l'app Salute per controllare le assunzioni programmate.`,
-      `DTSTART:${dtstart}`,
-      `DTEND:${dtend}`,
-      "RRULE:FREQ=DAILY",
-      "END:VEVENT",
+      icsLines.push(
+        "BEGIN:VEVENT",
+        `SUMMARY:💊 Terapia ore ${ora}`,
+        `DESCRIPTION:Apri l'app Salute per controllare le assunzioni programmate.`,
+        `DTSTART:${dtstart}`,
+        `DTEND:${dtend}`,
+        "RRULE:FREQ=DAILY",
+        "END:VEVENT",
+      );
+    });
+
+    icsLines.push("END:VCALENDAR");
+
+    // Download sicuro tramite Data URI
+    const fileContent = icsLines.join("\r\n");
+    const encodedUri =
+      "data:text/calendar;charset=utf-8," + encodeURIComponent(fileContent);
+
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "Tutte_le_Terapie.ics");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    alert(
+      `Sincronizzazione completata! Orari inclusi: ${orariUnici.join(", ")}`,
     );
-  });
-
-  icsLines.push("END:VCALENDAR");
-
-  const fileContent = icsLines.join("\r\n");
-  const encodedUri =
-    "data:text/calendar;charset=utf-8," + encodeURIComponent(fileContent);
-
-  const link = document.createElement("a");
-  link.setAttribute("href", encodedUri);
-  link.setAttribute("download", "Tutte_le_Terapie.ics");
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-
-  alert(
-    `Sincronizzazione completata! Creato 1 solo file con gli orari: ${orariUnici.join(", ")}`,
-  );
+  } catch (err) {
+    console.error("Errore esportazione:", err);
+    alert(
+      "Si è verificato un errore durante la generazione del file. Controlla gli orari inseriti.",
+    );
+  }
 };
 
 // GESTIONE APPUNTAMENTI
